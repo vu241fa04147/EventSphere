@@ -1,5 +1,7 @@
 
 const pool = require("./config/db");
+const bcrypt = require("bcryptjs");
+const User = require("./models/User");
 
 const events = [
     {
@@ -46,34 +48,52 @@ const events = [
 
 async function seedEvents() {
     try {
+        const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+        const adminPassword = process.env.ADMIN_PASSWORD;
+
+        if (!adminEmail || !adminPassword || adminPassword.length < 12) {
+            throw new Error("Set ADMIN_EMAIL and an ADMIN_PASSWORD of at least 12 characters before seeding.");
+        }
+
+        if (!await User.findByEmail(adminEmail)) {
+            await User.create({
+                name: "EventSphere Admin",
+                email: adminEmail,
+                password: await bcrypt.hash(adminPassword, 10),
+                role: "admin"
+            });
+            console.log(`Admin account created for ${adminEmail}.`);
+        } else {
+            console.log(`Admin account ${adminEmail} already exists; it was not changed.`);
+        }
+
         const [rows] = await pool.query("SELECT COUNT(*) AS total FROM events");
 
         if (rows[0].total > 0) {
             console.log("Events already exist. No new events inserted.");
-            return;
+        } else {
+            for (const event of events) {
+                await pool.execute(
+                    `INSERT INTO events
+                    (title, description, category, location, date, time, price, image)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        event.title,
+                        event.description,
+                        event.category,
+                        event.location,
+                        event.date,
+                        event.time,
+                        event.price,
+                        event.image
+                    ]
+                );
+            }
+            console.log("Four events inserted successfully!");
         }
-
-        for (const event of events) {
-            await pool.execute(
-                `INSERT INTO events
-                (title, description, category, location, date, time, price, image)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    event.title,
-                    event.description,
-                    event.category,
-                    event.location,
-                    event.date,
-                    event.time,
-                    event.price,
-                    event.image
-                ]
-            );
-        }
-
-        console.log("Four events inserted successfully!");
     } catch (error) {
         console.error("Seeding failed:", error.message);
+        process.exitCode = 1;
     } finally {
         await pool.end();
     }

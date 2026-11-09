@@ -1,85 +1,69 @@
-# EventSphere – Event Management and Booking System
+# EventSphere
 
-A beginner-friendly MERN project (MongoDB, Express, React, Node.js).
+EventSphere is an event discovery and ticket-booking app built with React, Express, and TiDB/MySQL.
 
-## Requirements
-- Node.js (LTS)
-- MongoDB Community Server running locally
-- MongoDB Compass (optional, for viewing database documents)
+## Features
 
-> MongoDB Compass is only a database viewer. It does not run the MongoDB database server.
-> The backend uses `mongodb://127.0.0.1:27017/eventsphere`.
+- Browse events and search by title, location, or description
+- Filter events by category and view event details
+- Register and sign in with hashed passwords and JWT
+- Book tickets, view bookings, and cancel bookings
+- Admin event creation and deletion
 
-## Run on Windows (PowerShell)
+## Database setup
 
-1. Extract this ZIP.
-2. Open the extracted `EventSphere` folder in VS Code.
-3. Open a terminal in the project root (the folder containing this README).
-4. Install dependencies:
+The backend uses TiDB's MySQL-compatible interface. Create a database, then execute [`backend/schema.sql`](backend/schema.sql) in its SQL console. The schema creates the `users`, `events`, and `bookings` tables.
 
-   ```powershell
-   npm install
-   npm install --prefix backend
-   npm install --prefix frontend
-   ```
+Copy the backend environment template and fill in the connection values from your database provider:
 
-5. Create the backend environment file:
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
 
-   ```powershell
-   Copy-Item backend/.env.example backend/.env
-   ```
+Set `TIDB_HOST`, `TIDB_PORT`, `TIDB_USER`, `TIDB_PASSWORD`, and `TIDB_DATABASE`. Choose a long, unique `JWT_SECRET`. Set a private `ADMIN_EMAIL` and an `ADMIN_PASSWORD` of at least 12 characters before seeding. Never commit `backend/.env`.
 
-6. Make sure MongoDB Community Server is installed and running. If installed as a Windows service, check:
+## Run locally (Windows PowerShell)
 
-   ```powershell
-   Get-Service MongoDB
-   ```
+Install dependencies from the repository root:
 
-   If stopped, run PowerShell as Administrator and use:
+```powershell
+npm install
+npm install --prefix backend
+npm install --prefix frontend
+```
 
-   ```powershell
-   Start-Service MongoDB
-   ```
-
-7. Start frontend and backend together from the project root:
-
-   ```powershell
-   npm run dev
-   ```
-
-8. Open the Vite URL printed in the terminal (usually `http://localhost:5173`).
-
-## Backend health check
-Open `http://localhost:5000/api/health`.
-- `server: "Running"` means Express is running.
-- `database: "Connected"` means MongoDB is connected.
-
-The server starts even if MongoDB is offline, so the health route can explain the issue instead of the browser showing a connection failure.
-
-## Seed demo events and admin
-With MongoDB running, open a second terminal at the project root and run:
+After configuring the database and executing the schema, seed example events and create the admin account:
 
 ```powershell
 npm run seed
 ```
 
-This creates demo events and an admin account:
-- Email: `admin@eventsphere.com`
-- Password: `Admin@123`
+Start the backend and frontend together:
 
-Change the demo password before using this project beyond a classroom demo.
+```powershell
+npm run dev
+```
 
-## Features
-- Home page and event catalogue
-- Search and category filtering
-- Register and login with hashed passwords and JWT
-- Book event tickets
-- View and cancel your bookings
-- Admin event creation and deletion
-- MongoDB collections: `users`, `events`, `bookings`
+Open the Vite URL (usually `http://localhost:5173`). Check the backend at `http://localhost:5000/api/health`.
 
-## Notes
-- Public registration creates a normal user account.
-- Admin-only actions require the seeded admin account.
-- The app uses localStorage for the demo login session.
-- This is a learning project, not a production-ready ticketing platform.
+## Deploy the frontend with GitHub Pages
+
+The GitHub Actions workflow in `.github/workflows/pages.yml` builds and publishes the frontend on pushes to `main`.
+
+1. In the repository's **Settings → Pages**, set the build and deployment source to **GitHub Actions**.
+2. Push to `main` or run the **Deploy EventSphere to GitHub Pages** workflow manually.
+3. Open `https://vu241fa04147.github.io/EventSphere/` after the workflow succeeds.
+
+The frontend uses the existing Render API by default. To use another API, configure `VITE_API_URL` as a GitHub Actions repository variable (include the `/api` path).
+
+## Backend deployment
+
+The API currently points to `https://eventsphere-0rp0.onrender.com/api`. Its health check requires a live TiDB/MySQL database. Configure `TIDB_HOST`, `TIDB_PORT`, `TIDB_USER`, `TIDB_PASSWORD`, `TIDB_DATABASE`, and `JWT_SECRET` in the backend host's private environment settings. Execute `backend/schema.sql` against that database and run `npm run seed` with private `ADMIN_EMAIL` and `ADMIN_PASSWORD` values.
+
+`/api/health` should return `"server": "Running"` and `"database": "Connected to TiDB"` before registration, event browsing, and booking can work.
+
+## Demo data
+
+The seed script adds four sample events when the events table is empty. It creates the admin account specified by `ADMIN_EMAIL` and `ADMIN_PASSWORD` only if that email does not already exist. It will not overwrite an existing account's password.
+
+Public registration creates a regular user account. Admin-only operations require the seeded admin account. The login token is stored in the browser's local storage; use HTTPS in production.
