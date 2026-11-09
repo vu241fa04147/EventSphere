@@ -29,40 +29,27 @@ async function request(path, options = {}) {
 
 export const api = {
   getEvents: (query = "") => request(`/events${query}`),
-
-  register: (body) =>
-    request("/auth/register", {
-      method: "POST",
-      body: JSON.stringify(body)
-    }),
-
-  login: (body) =>
-    request("/auth/login", {
-      method: "POST",
-      body: JSON.stringify(body)
-    }),
-
-  book: (eventId, quantity) =>
-    request("/bookings", {
-      method: "POST",
-      body: JSON.stringify({ eventId, quantity })
-    }),
-
+  register: (body) => request("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(body)
+  }),
+  login: (body) => request("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body)
+  }),
+  book: (eventId, quantity) => request("/bookings", {
+    method: "POST",
+    body: JSON.stringify({ eventId, quantity })
+  }),
   myBookings: () => request("/bookings/my"),
-
-  cancelBooking: (id) =>
-    request(`/bookings/${id}/cancel`, {
-      method: "PATCH"
-    }),
-
-  addEvent: (body) =>
-    request("/events", {
-      method: "POST",
-      body: JSON.stringify(body)
-    }),
-
-  deleteEvent: (id) =>
-    request(`/events/${id}`, {
-      method: "DELETE"
-    })
+  cancelBooking: (id) => request(`/bookings/${id}/cancel`, {
+    method: "PATCH"
+  }),
+  addEvent: (body) => request("/events", {
+    method: "POST",
+    body: JSON.stringify(body)
+  }),
+  deleteEvent: (id) => request(`/events/${id}`, {
+    method: "DELETE"
+  })
 };
