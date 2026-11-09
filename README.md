@@ -54,6 +54,8 @@ The GitHub Actions workflow in `.github/workflows/pages.yml` builds and publishe
 2. Push to `main` or run the **Deploy EventSphere to GitHub Pages** workflow manually.
 3. Open `https://vu241fa04147.github.io/EventSphere/` after the workflow succeeds.
 
+GitHub Pages must be enabled for the repository. If the repository is private and its GitHub plan does not include private Pages sites, make the repository public or choose another frontend host.
+
 The frontend uses the existing Render API by default. To use another API, configure `VITE_API_URL` as a GitHub Actions repository variable (include the `/api` path).
 
 ## Backend deployment
