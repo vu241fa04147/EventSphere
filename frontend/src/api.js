@@ -21,7 +21,12 @@ async function request(path, options = {}) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw new Error(data.message || "Something went wrong.");
+        const message = typeof data.message === "string" ? data.message.trim() : "";
+        throw new Error(message || (
+            response.status >= 500
+                ? "The EventSphere service is unavailable. The backend database may need configuration."
+                : "Something went wrong. Please check your details and try again."
+        ));
     }
 
     return data;
