@@ -1,84 +1,82 @@
-require("dotenv").config();
-const mongoose = require("mongoose");
-const bcrypt = require("bcryptjs");
-const User = require("./models/User");
-const Event = require("./models/Event");
 
-async function seed() {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    const adminEmail = "admin@eventsphere.com";
-    let admin = await User.findOne({ email: adminEmail });
-    if (!admin) {
-      admin = await User.create({
-        name: "EventSphere Admin",
-        email: adminEmail,
-        password: await bcrypt.hash("Admin@123", 10),
-        role: "admin"
-      });
-    } else {
-      admin.role = "admin";
-      await admin.save();
+const pool = require("./config/db");
+
+const events = [
+    {
+        title: "Campus Music Night",
+        description: "An energetic evening featuring live music, student bands and great performances.",
+        category: "Music",
+        location: "Vignan University, Vadlamudi",
+        date: "2027-02-15 11:30:00",
+        time: "5:00 PM",
+        price: 199,
+        image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a"
+    },
+    {
+        title: "Technology & Innovation Summit",
+        description: "Explore new technologies, innovation and ideas from industry experts.",
+        category: "Technology",
+        location: "Vignan University, Vadlamudi",
+        date: "2027-03-10 10:00:00",
+        time: "10:00 AM",
+        price: 299,
+        image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4"
+    },
+    {
+        title: "Creative Arts Festival",
+        description: "Celebrate creativity through art, painting, music and cultural performances.",
+        category: "Arts",
+        location: "Vignan University, Vadlamudi",
+        date: "2027-03-20 09:00:00",
+        time: "9:00 AM",
+        price: 149,
+        image: "https://images.unsplash.com/photo-1513364776144-60967b0f800f"
+    },
+    {
+        title: "Career & Business Workshop",
+        description: "Learn career skills, entrepreneurship and professional development.",
+        category: "Workshop",
+        location: "Vignan University, Vadlamudi",
+        date: "2027-04-05 09:30:00",
+        time: "9:30 AM",
+        price: 99,
+        image: "https://images.unsplash.com/photo-1552664730-d307ca884978"
     }
+];
 
-    if (await Event.countDocuments() === 0) {
-      const events = [
-        {
-          title: "Campus Music Night",
-          description: "An energetic evening featuring live music, student bands and great performances.",
-          category: "Music",
-          location: "Vignan University, Vadlamudi",
-          date: new Date("2027-02-15T17:00:00"),
-          time: "5:00 PM",
-          price: 199,
-          availableSeats: 150,
-          image: "https://images.unsplash.com/photo-1459749411175-04bf5292ceea?w=900"
-        },
-        {
-          title: "Technology & Innovation Summit",
-          description: "Explore practical technology ideas, student projects and inspiring tech talks.",
-          category: "Technology",
-          location: "Guntur",
-          date: new Date("2027-03-10T10:00:00"),
-          time: "10:00 AM",
-          price: 299,
-          availableSeats: 100,
-          image: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=900"
-        },
-        {
-          title: "Creative Arts Festival",
-          description: "A celebration of art, dance, photography and creative expression.",
-          category: "Arts",
-          location: "Vijayawada",
-          date: new Date("2027-03-25T16:00:00"),
-          time: "4:00 PM",
-          price: 149,
-          availableSeats: 200,
-          image: "https://images.unsplash.com/photo-1531058020387-3be344556be6?w=900"
-        },
-        {
-          title: "Career & Business Workshop",
-          description: "Learn about career planning, communication, entrepreneurship and interviews.",
-          category: "Workshop",
-          location: "Guntur",
-          date: new Date("2027-04-05T11:00:00"),
-          time: "11:00 AM",
-          price: 99,
-          availableSeats: 80,
-          image: "https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=900"
+async function seedEvents() {
+    try {
+        const [rows] = await pool.query("SELECT COUNT(*) AS total FROM events");
+
+        if (rows[0].total > 0) {
+            console.log("Events already exist. No new events inserted.");
+            return;
         }
-      ];
-      await Event.insertMany(events);
-    }
 
-    console.log("Demo data ready.");
-    console.log("Admin email: admin@eventsphere.com");
-    console.log("Admin password: Admin@123");
-  } catch (error) {
-    console.error("Seed failed:", error.message);
-    process.exitCode = 1;
-  } finally {
-    await mongoose.disconnect();
-  }
+        for (const event of events) {
+            await pool.execute(
+                `INSERT INTO events
+                (title, description, category, location, date, time, price, image)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    event.title,
+                    event.description,
+                    event.category,
+                    event.location,
+                    event.date,
+                    event.time,
+                    event.price,
+                    event.image
+                ]
+            );
+        }
+
+        console.log("Four events inserted successfully!");
+    } catch (error) {
+        console.error("Seeding failed:", error.message);
+    } finally {
+        await pool.end();
+    }
 }
-seed();
+
+seedEvents();

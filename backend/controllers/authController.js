@@ -6,7 +6,7 @@ const sendEmail = require("../utils/sendEmail");
 
 function makeToken(user) {
   return jwt.sign(
-    { id: user._id, role: user.role },
+    { id: user.id, role: user.role },
     process.env.JWT_SECRET,
     { expiresIn: "1d" }
   );
@@ -30,9 +30,7 @@ async function register(req, res) {
 
     const normalizedEmail = email.trim().toLowerCase();
 
-    const existing = await User.findOne({
-      email: normalizedEmail
-    });
+    const existing = await User.findByEmail(normalizedEmail);
 
     if (existing) {
       return res.status(409).json({
@@ -46,11 +44,13 @@ async function register(req, res) {
       password: await bcrypt.hash(password, 10)
     });
 
-    // Send registration success email
-    const emailSent = await sendEmail(
-      normalizedEmail,
-      "Registration Successful - EventSphere",
-      `Hello ${name},
+    let emailSent = false;
+
+    try {
+      emailSent = await sendEmail(
+        normalizedEmail,
+        "Registration Successful - EventSphere",
+        `Hello ${name},
 
 Welcome to EventSphere!
 
@@ -62,14 +62,17 @@ Thank you for joining EventSphere!
 
 Regards,
 EventSphere Team`
-    );
+      );
+    } catch (emailError) {
+      console.error("Email sending failed:", emailError.message);
+    }
 
     return res.status(201).json({
       message: "Registration successful",
-      emailSent: emailSent,
+      emailSent,
       token: makeToken(user),
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role
@@ -93,9 +96,9 @@ async function login(req, res) {
       });
     }
 
-    const user = await User.findOne({
-      email: email.trim().toLowerCase()
-    });
+    const user = await User.findByEmail(
+      email.trim().toLowerCase()
+    );
 
     if (!user || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({
@@ -107,7 +110,7 @@ async function login(req, res) {
       message: "Login successful",
       token: makeToken(user),
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role
