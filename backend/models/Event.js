@@ -1,68 +1,34 @@
+const mongoose = require("mongoose");
 
-const pool = require("../config/db");
+const eventSchema = new mongoose.Schema({
+    title: { type: String, required: true, trim: true, maxlength: 180 },
+    description: { type: String, required: true },
+    category: { type: String, required: true, trim: true, maxlength: 80 },
+    location: { type: String, required: true, trim: true, maxlength: 255 },
+    date: { type: Date, required: true },
+    time: { type: String, required: true, maxlength: 40 },
+    price: { type: Number, required: true, min: 0 },
+    image: { type: String, default: "" }
+}, { timestamps: true });
 
-const Event = {
-    async find(filter = {}) {
-        let sql = "SELECT * FROM events";
-        const conditions = [];
-        const values = [];
+eventSchema.statics.findMatching = function (filter = {}) {
+    const query = {};
 
-        if (filter.category && filter.category !== "All") {
-            conditions.push("category = ?");
-            values.push(filter.category);
-        }
-
-        if (filter.search) {
-            conditions.push(
-                "(title LIKE ? OR location LIKE ? OR description LIKE ?)"
-            );
-            const search = `%${filter.search}%`;
-            values.push(search, search, search);
-        }
-
-        if (conditions.length) {
-            sql += " WHERE " + conditions.join(" AND ");
-        }
-
-        sql += " ORDER BY date ASC";
-
-        const [rows] = await pool.execute(sql, values);
-        return rows;
-    },
-
-    async findById(id) {
-        const [rows] = await pool.execute(
-            "SELECT * FROM events WHERE id = ? LIMIT 1",
-            [id]
-        );
-
-        return rows[0] || null;
-    },
-
-    async create(event) {
-        const {
-            title, description, category,
-            location, date, time, price, image
-        } = event;
-
-        const [result] = await pool.execute(
-            `INSERT INTO events
-            (title, description, category, location, date, time, price, image)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [title, description, category, location, date, time, price, image]
-        );
-
-        return this.findById(result.insertId);
-    },
-
-    async findByIdAndDelete(id) {
-        const event = await this.findById(id);
-
-        if (!event) return null;
-
-        await pool.execute("DELETE FROM events WHERE id = ?", [id]);
-        return event;
+    if (filter.category && filter.category !== "All") {
+        query.category = filter.category;
     }
+
+    if (filter.search) {
+        const escapedSearch = filter.search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const search = new RegExp(escapedSearch, "i");
+        query.$or = [
+            { title: search },
+            { location: search },
+            { description: search }
+        ];
+    }
+
+    return this.find(query).sort({ date: 1 });
 };
 
-module.exports = Event;
+module.exports = mongoose.model("Event", eventSchema);

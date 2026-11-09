@@ -1,13 +1,14 @@
 
 const router = require("express").Router();
 const Event = require("../models/Event");
+const Booking = require("../models/Booking");
 const { protect, adminOnly } = require("../middleware/auth");
 
 router.get("/", async (req, res) => {
     try {
         const { search, category } = req.query;
 
-        const events = await Event.find({
+        const events = await Event.findMatching({
             search,
             category
         });
@@ -49,6 +50,7 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
             return res.status(404).json({ message: "Event not found" });
         }
 
+        await Booking.deleteForEvent(event.id);
         res.json({ message: "Event deleted successfully" });
     } catch (error) {
         res.status(400).json({ message: error.message });

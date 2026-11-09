@@ -80,6 +80,12 @@ EventSphere Team`
     });
 
   } catch (error) {
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "An account with this email already exists"
+      });
+    }
+
     return res.status(500).json({
       message: error.message
     });

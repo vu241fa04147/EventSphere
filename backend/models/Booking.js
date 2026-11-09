@@ -1,62 +1,58 @@
+const mongoose = require("mongoose");
 
-const pool = require("../config/db");
-
-const Booking = {
-    async create(booking) {
-        const {
-            user_id,
-            event_id,
-            quantity,
-            total_price
-        } = booking;
-
-        const [result] = await pool.execute(
-            `INSERT INTO bookings
-            (user_id, event_id, quantity, total_price)
-            VALUES (?, ?, ?, ?)`,
-            [user_id, event_id, quantity, total_price]
-        );
-
-        const [rows] = await pool.execute(
-            "SELECT * FROM bookings WHERE id = ?",
-            [result.insertId]
-        );
-
-        return rows[0];
+const bookingSchema = new mongoose.Schema({
+    user_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+        index: true
     },
-
-    async findByUserId(userId) {
-        const [rows] = await pool.execute(
-            `SELECT b.*, e.title, e.date, e.time, e.location, e.image
-             FROM bookings b
-             JOIN events e ON b.event_id = e.id
-             WHERE b.user_id = ?
-             ORDER BY b.created_at DESC`,
-            [userId]
-        );
-
-        return rows;
+    event_id: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Event",
+        required: true,
+        index: true
     },
-
-    async findById(id) {
-        const [rows] = await pool.execute(
-            "SELECT * FROM bookings WHERE id = ?",
-            [id]
-        );
-
-        return rows[0] || null;
-    },
-
-    async cancel(id, userId) {
-        const [result] = await pool.execute(
-            `UPDATE bookings
-             SET status = 'cancelled'
-             WHERE id = ? AND user_id = ?`,
-            [id, userId]
-        );
-
-        return result.affectedRows > 0;
+    quantity: { type: Number, required: true, min: 1 },
+    total_price: { type: Number, required: true, min: 0 },
+    status: {
+        type: String,
+        enum: ["confirmed", "cancelled"],
+        default: "confirmed"
     }
+}, { timestamps: true });
+
+bookingSchema.statics.findByUserId = async function (userId) {
+    const bookings = await this.find({ user_id: userId })
+        .populate("event_id", "title date time location image")
+        .sort({ createdAt: -1 });
+
+    return bookings.map((booking) => {
+        const result = booking.toObject({ virtuals: true });
+        const event = result.event_id;
+
+        return {
+            ...result,
+            event_id: event?._id?.toString() || null,
+            title: event?.title,
+            date: event?.date,
+            time: event?.time,
+            location: event?.location,
+            image: event?.image
+        };
+    });
 };
 
-module.exports = Booking;
+bookingSchema.statics.cancelForUser = async function (bookingId, userId) {
+    const result = await this.updateOne(
+        { _id: bookingId, user_id: userId, status: { $ne: "cancelled" } },
+        { $set: { status: "cancelled" } }
+    );
+    return result.modifiedCount > 0;
+};
+
+bookingSchema.statics.deleteForEvent = function (eventId) {
+    return this.deleteMany({ event_id: eventId });
+};
+
+module.exports = mongoose.model("Booking", bookingSchema);

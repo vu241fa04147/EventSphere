@@ -1,9 +1,7 @@
 
 const express = require("express");
 const cors = require("cors");
-require("dotenv").config();
-
-const pool = require("./config/db");
+const { connectDatabase, mongoose } = require("./config/db");
 
 const authRoutes = require("./routes/authRoutes");
 const eventRoutes = require("./routes/eventRoutes");
@@ -15,22 +13,28 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send("EventSphere API is running with TiDB!");
+    res.send("EventSphere API is running with MongoDB Atlas!");
 });
 
 app.get("/api/health", async (req, res) => {
     try {
-        await pool.query("SELECT 1");
+        if (mongoose.connection.readyState !== 1) {
+            return res.status(503).json({
+                server: "Running",
+                database: "Not Connected"
+            });
+        }
+
+        await mongoose.connection.db.admin().ping();
 
         res.json({
             server: "Running",
-            database: "Connected to TiDB"
+            database: "Connected to MongoDB Atlas"
         });
-    } catch (error) {
-        res.status(500).json({
+    } catch {
+        res.status(503).json({
             server: "Running",
-            database: "Not Connected",
-            error: error.message
+            database: "Not Connected"
         });
     }
 });
@@ -47,6 +51,15 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`EventSphere server running on port ${PORT}`);
+async function start() {
+    await connectDatabase();
+
+    app.listen(PORT, "0.0.0.0", () => {
+        console.log(`EventSphere server running on port ${PORT}`);
+    });
+}
+
+start().catch((error) => {
+    console.error("MongoDB connection failed:", error.message);
+    process.exitCode = 1;
 });

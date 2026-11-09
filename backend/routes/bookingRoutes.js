@@ -8,7 +8,8 @@ router.post("/", protect, async (req, res) => {
     try {
         const { eventId, quantity } = req.body;
 
-        if (!eventId || !quantity || quantity < 1) {
+        const ticketCount = Number(quantity);
+        if (!eventId || !Number.isSafeInteger(ticketCount) || ticketCount < 1) {
             return res.status(400).json({
                 message: "Valid event ID and quantity are required"
             });
@@ -25,8 +26,8 @@ router.post("/", protect, async (req, res) => {
         const booking = await Booking.create({
             user_id: req.user.id,
             event_id: event.id,
-            quantity: Number(quantity),
-            total_price: Number(event.price) * Number(quantity)
+            quantity: ticketCount,
+            total_price: Number(event.price) * ticketCount
         });
 
         res.status(201).json({
@@ -50,7 +51,7 @@ router.get("/my", protect, async (req, res) => {
 
 router.patch("/:id/cancel", protect, async (req, res) => {
     try {
-        const cancelled = await Booking.cancel(
+        const cancelled = await Booking.cancelForUser(
             req.params.id,
             req.user.id
         );

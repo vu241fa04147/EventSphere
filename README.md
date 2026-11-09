@@ -1,6 +1,6 @@
 # EventSphere
 
-EventSphere is an event discovery and ticket-booking app built with React, Express, and TiDB/MySQL.
+EventSphere is an event discovery and ticket-booking app built with React, Express, and MongoDB Atlas.
 
 ## Features
 
@@ -10,17 +10,17 @@ EventSphere is an event discovery and ticket-booking app built with React, Expre
 - Book tickets, view bookings, and cancel bookings
 - Admin event creation and deletion
 
-## Database setup
+## Configure MongoDB Atlas
 
-The backend uses TiDB's MySQL-compatible interface. Create a database, then execute [`backend/schema.sql`](backend/schema.sql) in its SQL console. The schema creates the `users`, `events`, and `bookings` tables.
+The backend uses MongoDB collections (`users`, `events`, and `bookings`). MongoDB creates these collections when the application first writes documents; no SQL schema or `schema.sql` is needed.
 
-Copy the backend environment template and fill in the connection values from your database provider:
+1. In MongoDB Atlas, create a database user and allow the Render service to connect in **Network Access**. For better security, add the Render service's outbound IP ranges instead of allowing every IP.
+2. In your Atlas cluster, click **Connect → Drivers** and copy the Node.js connection string.
+3. Replace its username and password with the database user's credentials, URL-encoding special characters in those values. Set the database name in the URI path to `eventsphere`.
+4. Save the URI as `MONGO_URI` in the Render backend service's private environment variables. Do not commit the URI or share it publicly.
+5. Also set `JWT_SECRET` to a long, unique random value.
 
-```powershell
-Copy-Item backend/.env.example backend/.env
-```
-
-Set `TIDB_HOST`, `TIDB_PORT`, `TIDB_USER`, `TIDB_PASSWORD`, and `TIDB_DATABASE`. Choose a long, unique `JWT_SECRET`. Set a private `ADMIN_EMAIL` and an `ADMIN_PASSWORD` of at least 12 characters before seeding. Never commit `backend/.env`.
+The API health check at `/api/health` reports `"database": "Connected to MongoDB Atlas"` when the connection works.
 
 ## Run locally (Windows PowerShell)
 
@@ -32,11 +32,19 @@ npm install --prefix backend
 npm install --prefix frontend
 ```
 
-After configuring the database and executing the schema, seed example events and create the admin account:
+Copy the environment template and fill in `MONGO_URI` and `JWT_SECRET`:
+
+```powershell
+Copy-Item backend/.env.example backend/.env
+```
+
+Set `ADMIN_EMAIL` and an `ADMIN_PASSWORD` of at least 12 characters in `backend/.env`, then seed sample events and create the admin account:
 
 ```powershell
 npm run seed
 ```
+
+The seeder adds four sample events when the events collection is empty. It creates the admin account only if that email does not already exist and never changes an existing account's password.
 
 Start the backend and frontend together:
 
@@ -50,22 +58,14 @@ Open the Vite URL (usually `http://localhost:5173`). Check the backend at `http:
 
 The GitHub Actions workflow in `.github/workflows/pages.yml` builds and publishes the frontend on pushes to `main`.
 
-1. In the repository's **Settings → Pages**, set the build and deployment source to **GitHub Actions**.
-2. Push to `main` or run the **Deploy EventSphere to GitHub Pages** workflow manually.
-3. Open `https://vu241fa04147.github.io/EventSphere/` after the workflow succeeds.
+The repository must have GitHub Pages enabled with **Settings → Pages → Build and deployment → Source: GitHub Actions**.
 
-GitHub Pages must be enabled for the repository. If the repository is private and its GitHub plan does not include private Pages sites, make the repository public or choose another frontend host.
-
-The frontend uses the existing Render API by default. To use another API, configure `VITE_API_URL` as a GitHub Actions repository variable (include the `/api` path).
+The frontend is published at `https://vu241fa04147.github.io/EventSphere/` and uses `https://eventsphere-0rp0.onrender.com/api` by default. To use another API, configure `VITE_API_URL` as a GitHub Actions repository variable, including the `/api` path.
 
 ## Backend deployment
 
-The API currently points to `https://eventsphere-0rp0.onrender.com/api`. Its health check requires a live TiDB/MySQL database. Configure `TIDB_HOST`, `TIDB_PORT`, `TIDB_USER`, `TIDB_PASSWORD`, `TIDB_DATABASE`, and `JWT_SECRET` in the backend host's private environment settings. Execute `backend/schema.sql` against that database and run `npm run seed` with private `ADMIN_EMAIL` and `ADMIN_PASSWORD` values.
+The Render web service should use the `backend` directory as its root, `npm install` as its build command, and `npm start` as its start command. Set `MONGO_URI` and `JWT_SECRET` in Render's private environment settings. Render automatically deploys code pushed to the linked branch when auto-deploy is enabled.
 
-`/api/health` should return `"server": "Running"` and `"database": "Connected to TiDB"` before registration, event browsing, and booking can work.
+To create sample events and an admin user in production, run `npm run seed` from the backend service shell after setting `ADMIN_EMAIL` and `ADMIN_PASSWORD` privately in the service environment. Remove those seed-only variables afterward if they are no longer needed.
 
-## Demo data
-
-The seed script adds four sample events when the events table is empty. It creates the admin account specified by `ADMIN_EMAIL` and `ADMIN_PASSWORD` only if that email does not already exist. It will not overwrite an existing account's password.
-
-Public registration creates a regular user account. Admin-only operations require the seeded admin account. The login token is stored in the browser's local storage; use HTTPS in production.
+Public registration creates a regular user account. Admin-only operations require the seeded admin account. The login token is stored in browser local storage; use HTTPS in production.
