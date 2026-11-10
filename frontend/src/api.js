@@ -1,4 +1,4 @@
-const API = (import.meta.env.VITE_API_URL || "https://eventsphere-0rp0.onrender.com/api").replace(/\/+$/, "");
+const API = (import.meta.env.VITE_API_URL || "https://eventsphere-backend-9vfg.onrender.com/api").replace(/\/+$/, "");
 
 async function request(path, options = {}) {
     let response;
