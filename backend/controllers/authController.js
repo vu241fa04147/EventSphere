@@ -44,13 +44,10 @@ async function register(req, res) {
       password: await bcrypt.hash(password, 10)
     });
 
-    let emailSent = false;
-
-    try {
-      emailSent = await sendEmail(
-        normalizedEmail,
-        "Registration Successful - EventSphere",
-        `Hello ${name},
+    sendEmail(
+      normalizedEmail,
+      "Registration Successful - EventSphere",
+      `Hello ${name},
 
 Welcome to EventSphere!
 
@@ -62,14 +59,12 @@ Thank you for joining EventSphere!
 
 Regards,
 EventSphere Team`
-      );
-    } catch (emailError) {
+    ).catch((emailError) => {
       console.error("Email sending failed:", emailError.message);
-    }
+    });
 
     return res.status(201).json({
       message: "Registration successful",
-      emailSent,
       token: makeToken(user),
       user: {
         id: user.id,
