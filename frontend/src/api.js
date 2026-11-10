@@ -1,5 +1,9 @@
 const API = (import.meta.env.VITE_API_URL || "https://eventsphere-backend-9vfg.onrender.com/api").replace(/\/+$/, "");
 
+function normalizeEvent(event) {
+    return { ...event, id: event.id || event._id };
+}
+
 async function request(path, options = {}) {
     let response;
 
@@ -33,8 +37,8 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-    getEvents: (query = "") => request(`/events${query}`),
-    getEvent: (id) => request(`/events/${encodeURIComponent(id)}`),
+    getEvents: async (query = "") => (await request(`/events${query}`)).map(normalizeEvent),
+    getEvent: async (id) => normalizeEvent(await request(`/events/${encodeURIComponent(id)}`)),
     register: (body) => request("/auth/register", {
         method: "POST",
         body: JSON.stringify(body)
